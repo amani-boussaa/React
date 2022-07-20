@@ -1,30 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { UilTemperaturePlus } from '@iconscout/react-unicons'
 import { UilRaindropsAlt } from '@iconscout/react-unicons'
-function Forecast() {
-    const [facts, setFacts] = useState([]);
-    const [listening, setListening] = useState(false);
-    useEffect(() => {
-       
-
-            const events = new EventSource('http://192.168.100.21/events');
-
-            events.addEventListener('new_readings', function (event) {
-                var date_ob = new Date();
-                var hours = date_ob.getHours();
-                var minutes = date_ob.getMinutes();
-                var seconds = date_ob.getSeconds();
-                var time = `${hours}:${minutes}:${seconds}`
-                let data = JSON.parse(event.data)
-                Object.assign(data, { time: time })
-
-                setFacts((facts) => facts.concat(data));
-
-            });
-
-            setListening(true);
-        
-    }, [facts]);
+function Forecast(props) {
     return (
         <div>
             <div className="flex items-center justify-start mt-6">
@@ -35,7 +12,7 @@ function Forecast() {
             <div className="flex flex-row items-center justify-between text-white overflow-x-scroll">
 
 
-                {facts.map((item, index) => (
+                {props.facts.map((item, index) => (
                     <div
                         key={index}
                         className="flex flex-col  w-1/4 items-center justify-center mr-7"
@@ -53,7 +30,7 @@ function Forecast() {
             <div className="flex flex-row items-center justify-between text-white overflow-x-scroll">
 
 
-                {facts.map((item, index) => (
+                {props.facts.map((item, index) => (
                     <div
                         key={index}
                         className="flex flex-col w-1/4 items-center justify-center mr-7 "
