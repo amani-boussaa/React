@@ -1,7 +1,13 @@
 const express = require('express')
 const cors = require('cors');
 const EventSource = require('eventsource');
-const { json } = require('stream/consumers');
+const mongoose = require('mongoose');
+const EventModel = require('./models/Event');
+
+const date_fns = require("date-fns")
+
+
+const utils = require('./lib/utils');
 
 const app = express()
 var port = 4000;
@@ -14,13 +20,12 @@ var corsOptions = {
 }
 app.use(cors(corsOptions));
 
-const SEND_INTERVAL = 2000;
-//new ads
+mongoose.connect("mongodb+srv://new_user1:Q5tpeVkJOE6uOnp4@temperature.m6nm25j.mongodb.net/mydatabase?retryWrites=true&w=majority", {
+  useNewUrlParser: true,
+})
 
-var array = [];
 const writeEvent = (res, sseId) => {
-  // res.write(`id: ${sseId}\n\n`);
-  // res.write(`retry: 1000\n\n`);
+
   const donnee = {
     id: 0,
     temperature: 0,
@@ -32,13 +37,14 @@ const writeEvent = (res, sseId) => {
   source.addEventListener('new_readings', function (e) {
 
     var data = JSON.parse(e.data);
+    addEvent(data)
     const id = data.id;
     const temperature = data.temperature || 0;
     const humidity = data.humidity || 0;
     const readingId = data.readingId || 0;
 
     let new_data = null
-    console.log("donnee.temperature", donnee.temperature, "temperature", temperature)
+    // console.log("donnee.temperature", donnee.temperature, "temperature", temperature)
     if (donnee.temperature != temperature) {
       donnee.id = id
       donnee.temperature = temperature
@@ -89,9 +95,130 @@ app.get('/first_event', (req, res) => {
   }
 
 });
-/********-*********************** */
+// app.get('/all_events', (req, res) => {
+//   EventModel.find({}, (err, result) => {
+//     if (err) {
+//       res.send(err)
+//     }
+//     res.send(result)
+//   })
 
+// });
+app.get('/all_events', async (req, res) => {
+  try {
+    const body = req.query;
+    console.log("body", body)
+    const { startDate, endtDate, date } = body;
+    var query = {}
+    //ONLY DATE
+    if (typeof req.query.date !== 'undefined' && req.query.date != "") {
+      console.log("date  yes")
+      query = {
+        createdAt: {
+          $gte: date_fns.startOfDay(new Date(date)),
+          $lt: date_fns.endOfDay(new Date(date)),
+        }
+      }
+    } else {
+      // START DATE AND END DATE
+      if (typeof body.startDate !== 'undefined' && typeof body.endtDate !== 'undefined' && body.startDate !== '' && body.endtDate !== '') {
+        console.log("yess")
+        query = {
+          createdAt: {
+            // $gte: date_fns.startOfDay(new Date(startDate)),
+            // $lt: date_fns.endOfDay(new Date(endtDate)),
+            $gte: (new Date(startDate)),
+            $lt: (new Date(endtDate)),
+          }
+        }
+      }
+    }
+
+
+    const data = await EventModel.find(query);
+
+    res.status(200).send({
+      data,
+
+    });
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+const addEvent = async (data) => {
+  // app.get("/", async (req, res) => {
+  const id = data.id;
+  const temperature = data.temperature;
+  const humidity = data.humidity;
+  const readingId = data.readingId;
+  const event = new EventModel({ id: id, temperature: temperature, humidity: humidity, readingId: readingId });
+  try {
+    await event.save();
+    // console.log("inserted data")
+  } catch (error) {
+    console.log(err)
+  }
+};
 
 app.listen(port, function () {
   console.log("app listening on port " + port);
+});
+
+app.post('/search', async (req, res, next) => {
+  const body = req.body;
+
+  if (typeof body.year === 'undefined' || typeof body.month === 'undefined' || typeof body.day === 'undefined') {
+    return res.json({
+      error: 'Missing required parameters.'
+    });
+  }
+
+  const { year, month, day } = body;
+
+
+  if (!utils.validYear(year)) {
+    return res.json({
+      error: 'Invalid year parameter.'
+    });
+  }
+
+  if (!utils.validValue(month, 'month')) {
+    return res.json({
+      error: 'Invalid month parameter.'
+    });
+  }
+
+  if (!utils.validValue(day, 'day')) {
+    return res.json({
+      error: 'Invalid day parameter.'
+    });
+  }
+
+  const dateStart = new Date();
+
+  dateStart.setUTCFullYear(parseInt(year, 10));
+  dateStart.setUTCMonth(parseInt(month, 10));
+  dateStart.setUTCDate(parseInt(day, 10));
+
+  dateStart.setUTCHours(0, 0, 0);
+
+  const dateMax = new Date();
+
+  dateMax.setUTCFullYear(parseInt(year, 10));
+  dateMax.setUTCMonth(parseInt(month, 10));
+  dateMax.setUTCDate(parseInt(day, 10));
+  dateMax.setUTCHours(23, 59, 59);
+
+  try {
+    const query = {
+      date: {
+        $gte: dateStart, $lte: dateMax
+      }
+    };
+    console.log(query)
+    const results = await EventModel.find(query);
+    res.json(results);
+  } catch (err) {
+    res.json(err);
+  }
 });

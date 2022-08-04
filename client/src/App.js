@@ -8,6 +8,8 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Axios from 'axios'
 import Chart from "./components/Chart";
+import ErrorBoundary from './components/ErrorBoundary'
+import { ReactChart } from './components/ReactChart.tsx';
 
 
 const serverBaseURL = "http://localhost:4000";
@@ -21,42 +23,19 @@ function App() {
   const [temperature, setTemperature] = useState('');
   const [humidity, setHumidity] = useState('');
   const [aray_temperature, setAray_temperature] = useState([]);
+  const [chartData, setChartData] = useState({})
 
-  function callApi() {
-    Axios.get(`${serverBaseURL}/first_event`).then((res) => {
-      setListening(true)
-      const data1 = res.data;
-      console.log("data from axios", data1)
 
-      setRealTemperature(data1.temperature)
-      setFacts((facts) => facts.concat(data1));
-      setAray_temperature((aray_temperature) => aray_temperature.concat(data1.temperature));
 
-      var fixed_temp = data1.temperature.toFixed(2)
-      setTemperature(fixed_temp)
-      setHumidity(data1.humidity)
-      var date_ob = new Date();
-      var hours = date_ob.getHours();
-      var minutes = date_ob.getMinutes();
-      var time = `${hours}:${minutes}`
-      Object.assign(data1, { time: time })
-      alert(data1.temperature, data1.humidity)
-
-    }).catch(error => {
-      console.log(error.message);
-    });
-  }
   useEffect(() => {
-    // callApi()
+    fetchPrices()
+
     const source = new EventSource(`${serverBaseURL}/sse`);
 
     source.addEventListener('open', () => {
-      console.log("open")
     });
     source.addEventListener('message', (e) => {
       const parsedData = JSON.parse(e.data);
-      console.log("parsedData from event", parsedData)
-
       const data = JSON.parse(e.data);
       setRealTemperature(data.temperature)
       alert(data.temperature, data.humidity)
@@ -72,15 +51,15 @@ function App() {
       Object.assign(data, { time: time })
     });
     source.addEventListener('error', (e) => {
-      console.log('Error: ', e);
       source.close();
     });
     return () => {
       source.close();
     };
+
   }, []);
   const formatBackground = () => {
-    if (!listening) return "from-cyan-700 to-blue-700"
+    if (!realTemperature) return "from-cyan-700 to-blue-700"
     const threshold = 20;
     if (realTemperature <= threshold) return "from-cyan-700 to-blue-700"
     return "from-yellow-700 to-orange-700"
@@ -96,22 +75,51 @@ function App() {
       progress: undefined,
     });
   };
-
+  const fetchPrices = async () => {
+    const res = await fetch(`${serverBaseURL}/all_events`)
+    const data = await res.json()
+    let arraydata = data.data
+    setChartData({
+      labels: arraydata.map((crypto) => crypto.createdAt),
+      datasets: [
+        {
+          label: "Temperture in °C",
+          data: arraydata.map((crypto) => crypto.temperature),
+          backgroundColor: [
+            "#ffbb11",
+            "#ecf0f1",
+            "#50AF95",
+            "#f3ba2f",
+            "#2a71d0"
+          ]
+        }
+      ]
+    });
+  };
   return (
-    <div className={`mx-auto max-w-screen-md mt-4 py-5 px-32 bg-gradient-to-br  h-fit shadow-xl shadow-gray-400
-    ${formatBackground()}`}
-    >
-      {/* <TopButtons />
+    <div>
+      <div className={`mx-auto max-w-screen-md mt-4 py-5 px-32 bg-gradient-to-br  h-fit shadow-xl shadow-gray-400
+     ${formatBackground()}`}
+      >
+        {/* <TopButtons />
       <Inputs /> */}
 
-      <TimeAndLocation />
-      <TemperatureAndDetails temperature={temperature} realTemperature={realTemperature} humidity={humidity} />
-      <Forecast facts={facts} />
-      <Chart facts={facts} aray_temperature={aray_temperature} />
+        <TimeAndLocation />
 
 
-      <ToastContainer autoClose={5000} theme="colored" newestOnTop={true} />
+        <TemperatureAndDetails temperature={temperature} realTemperature={realTemperature} humidity={humidity} />
 
+        <Forecast facts={facts} />
+        {/* <Chart facts={facts} aray_temperature={aray_temperature} /> */}
+        <ToastContainer autoClose={5000} theme="colored" newestOnTop={true} />
+
+        {/* <ErrorBoundary> */}
+        {/* </ErrorBoundary> */}
+
+      </div>
+      <div className='mx-auto  mt-4 py-5 px-32 bg-gradient-to-br  h-fit shadow-xl shadow-gray-400'>
+        <ReactChart chartData={chartData} />
+      </div>
     </div>
   );
 }
