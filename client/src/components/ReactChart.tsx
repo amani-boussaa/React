@@ -18,6 +18,7 @@ ChartJS.register(...registerables);
 
 
 export const options = {
+  maintainAspectRatio:false,
   scales: {
     x: {
       type: 'time',
@@ -49,7 +50,7 @@ export const options = {
     },
     title: {
       display: true,
-      text: 'Temperture Line Chart',
+      text: 'Temperature and humidity Line Chart',
     }
   },
 }
@@ -60,24 +61,12 @@ export function ReactChart() {
   const [chartData, setChartData] = useState({})
   const [listening, setListening] = useState(false)
   const [filter, setFilter] = useState({})
-  // const [param, setParam] = useState({
-  //   startDate: "",
-  //   endtDate: "",
-  //   date: ""
-  // })
-  const [param, setParam] = useState({})
-  // const [filter, setFilter] = useState({
-  //   params: {
-  //     date: new Date().toJSON().slice(0, 10)
-  //   }
-  // })
   const [currentDate, setCurrentDate] = useState(new Date().toJSON().slice(0, 10));
-  // const [startDate, setStartDate] = useState("");
-  // const [endtDate, setEndDate] = useState("");
+  const [param, setParam] = useState({ date: currentDate })
   const [state, setState] = useState({
     startDate: "",
     endtDate: "",
-    date: ""
+    date: currentDate
   })
   function handleChange(event) {
     setFilter({
@@ -88,9 +77,7 @@ export function ReactChart() {
   }
   function filterData(evt) {
     const value = evt.target.value;
-    console.log(evt.target.name == "startDate")
     if (evt.target.name == "date") {
-      console.log("yes")
       setState({
         startDate: "",
         endtDate: "",
@@ -111,26 +98,11 @@ export function ReactChart() {
         [evt.target.name]: value
       });
     }
-    // setState({
-    //   ...state,
-    //   [evt.target.name]: value
-    // });
-    setParam({
-      ...param,
-      [evt.target.name]: value
-    })
-    
-    // setFilter({
-    //   params: {
-    //     param
-    //   }
-    // })
   }
   useEffect(() => {
 
     const sendGetRequest = async () => {
       try {
-        console.log(param)
         const { data } = await Axios.get(`${serverBaseURL}/all_events`, { params: param });
         const arraydata = data.data
         var array_temp = arraydata.map((obj) => obj.temperature)
@@ -138,23 +110,36 @@ export function ReactChart() {
         let new_arr = arraydata.map(
           obj => {
             var rObj = {};
-
             rObj["x"] = (obj.createdAt);
-            // rObj["x"] = Date.parse(obj.createdAt);
             rObj["y"] = obj.temperature;
             return rObj;
           }
         )
-
+        //humidity
+        let new_arr2 = arraydata.map(
+          obj2 => {
+            var rObj2 = {};
+            rObj2["x"] = (obj2.createdAt);
+            rObj2["y"] = obj2.humidity;
+            return rObj2;
+          }
+        )
         setChartData({
           datasets: [
             {
               fill: false,
-              label: "Temperture in °C",
+              label: "Temperature in °C",
               data: new_arr,
-              borderColor: 'rgb(75, 192, 192)',
+              borderColor: 'green',
               tension: 0.1
-            }
+            },
+            {
+              fill: false,
+              label: "Humidity in %",
+              data: new_arr2,
+              borderColor: 'rgb(20, 192, 192)',
+              tension: 0.1
+            },
           ]
         });
         if (chartData) {
@@ -171,20 +156,59 @@ export function ReactChart() {
 
   if (listening) {
     return <>
-      <div>
-        <label> filtrer par 1 date</label>
-        {/* <input type="date" onChange={handleChange} defaultValue={currentDate} /> */}
-        <input type="date" name="date" onChange={filterData} value={state.date} />
-      </div>
-      <div>
-        <label> filtrer par 2 date</label>
-        {/* <input type="date"  onChange={event => setStartDate(event.target.value)} defaultValue={currentDate} />
-        <input type="date" onChange={event => setEndDate(event.target.value)} defaultValue={currentDate} /> */}
-        <input type="datetime-local" name="startDate" value={state.startDate} onChange={filterData} />
-        <input type="datetime-local" name="endtDate" value={state.endtDate} onChange={filterData} />
+      <div className="mx-auto">
+        <div className="flex items-center justify-center">
+          <div className="max-w-7xl mx-auto  sm:px-6 lg:px-8  pt-6 " >
+            <div className="mt-10 sm:mt-0">
+              <div className="md:grid md:gap-6">
+                <div className="mt-5 md:mt-0 md:col-span-2">
 
+                  <div className="shadow overflow-hidden sm:rounded-md">
+                    <div className="px-4 py-5 bg-white sm:p-6">
+                      <div className="grid grid-cols-6 gap-6">
+                        <div className="col-span-6 sm:col-span-4">
+                        <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">
+                            Filter by one date
+                          </label>
+                          <label htmlFor="date" className="block text-sm font-medium text-gray-700">
+                            Date
+                          </label>
+
+                          <input type="date" name="date" id="date" onChange={filterData} value={state.date} className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" />
+
+                        </div>
+                       
+                        <div className="col-span-6 sm:col-span-3">
+                        <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">
+                            Filter by two dates
+                          </label>
+                          <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">
+                            start Date
+                          </label>
+
+                          <input type="datetime-local" id="startDate" name="startDate" onChange={filterData} value={state.startDate} className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" />
+
+                        </div>
+                        <div className="col-span-6 sm:col-span-3">
+                          <br></br>
+                          <label htmlFor="endtDate" className="block text-sm font-medium text-gray-700">
+                            End Date
+                          </label>
+
+                          <input type="datetime-local" name="endtDate" onChange={filterData} value={state.endtDate} className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+      <div className='mx-auto  mt-4  px-10 bg-gradient-to-br  h-fit shadow-xl pb-5 shadow-gray-400' id="canvas-container">
       <Line options={options} data={chartData} />
+      </div>
     </>
   }
 }

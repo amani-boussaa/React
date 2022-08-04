@@ -10,7 +10,7 @@ function TemperatureAndDetails(props) {
    
     return (
         <div>
-            <div className='flex items-center justify-between text-white py-3'>
+            <div className='flex items-center justify-between text-white py-3 flexcoll'>
                 <UilTemperature size={70} />
                 <p className='text-5xl'>{props.temperature}°</p>
                 <div className='flex flex-col space-y-2'>

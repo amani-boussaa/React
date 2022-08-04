@@ -117,9 +117,8 @@ function App() {
         {/* </ErrorBoundary> */}
 
       </div>
-      <div className='mx-auto  mt-4 py-5 px-32 bg-gradient-to-br  h-fit shadow-xl shadow-gray-400'>
+      {/* <div className='mx-auto  mt-4 py-5 px-32 bg-gradient-to-br  h-fit shadow-xl shadow-gray-400'> */}
         <ReactChart chartData={chartData} />
-      </div>
     </div>
   );
 }
